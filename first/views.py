@@ -14,10 +14,18 @@ from rest_framework.permissions import IsAuthenticated
 from django.conf import settings
 from django.http import JsonResponse
 # Create your views here.
+import cv2
 from rest_framework.pagination import PageNumberPagination
 
 class MyPagination(PageNumberPagination):
     page_size = 10
+
+def get_video_resolution(video_path):
+    cap = cv2.VideoCapture(video_path)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    cap.release()
+    return (width, height)
 
 class Index(APIView):
     permission_classes = (IsAuthenticated,)
@@ -36,16 +44,17 @@ class Index(APIView):
         if serializer.is_valid(): 
             ser=serializer.save()
             video=str(local_host_url)+serializer.data['video']
+            width, height = get_video_resolution(video)
+            print("Video resolution",width,height)
             img_logo=str(local_host_url)+serializer.data['logo']
             context=serializer.data['content']
             usr=MyUser.objects.get(email=request.user.email)
             usr_img=str(local_host_url)+'/media/'+ str(usr.profile)
             output_file=f'media/final_video/first_output_{ser.id}.mp4'
             output_file2=f'media/final_video/{ser.id}.mp4'
-            command = f'ffmpeg -i {video} -i {img_logo} -i {usr_img} -filter_complex \"[0:v][1:v]overlay=10:10[bg];[bg][2:v]overlay=500:8\ , drawtext=text=\'{context}\':fontsize=20:x=w-mod(t*50\,w+tw):y=h/1.2-th/2:fontcolor=white:box=1:boxcolor=black@0.5" -codec:a copy {output_file}'
-            
+            command = f'ffmpeg -i {video} -i {img_logo} -i {usr_img} -filter_complex \"[0:v][1:v]overlay=10:10[bg];[bg][2:v]overlay={width-150}:8\ , drawtext=text=\'{context}\':fontsize=20:x=w-mod(t*50\,w+tw):y=h/1.2-th/2:fontcolor=white:box=1:boxcolor=black@0.5" -codec:a copy {output_file}'
             os.system(command)
-            command2=f'ffmpeg -i {output_file} -vf "drawtext=text="{usr.name}":x=510:y=110:fontsize=24:fontcolor=white" -codec:a copy {output_file2}'
+            command2=f'ffmpeg -i {output_file} -vf "drawtext=text="{usr.name}":x={width-150}:y=110:fontsize=24:fontcolor=white" -codec:a copy {output_file2}'
             os.system(command2)
             obj=Videomodel.objects.get(id=ser.id)
             removeable_video=Videomodel.objects.get(id=ser.id).video.path

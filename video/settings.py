@@ -175,7 +175,7 @@ EMAIL_HOST_PASSWORD = 'pgmmignlqptmblko'
 
 # kaif git persionaltoken
 # git_token=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
-# git_new_token=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
+# git_new_token=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
 
 
 
